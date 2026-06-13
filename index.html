@@ -7,45 +7,23 @@
 <style>
 :root{--red:#991b1b;--gold:#d9a441;--brown:#7c2d12}
 *{box-sizing:border-box}
-body{
-  margin:0;min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;
-  background:linear-gradient(150deg,#b91c1c 0%,#b91c1c 32%,#fff7ed 32.2%,#fff7ed 100%);
-  color:#3b1d1d;
-}
+body{margin:0;min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;background:linear-gradient(150deg,#b91c1c 0%,#b91c1c 32%,#fff7ed 32.2%,#fff7ed 100%);color:#3b1d1d}
 .wrap{max-width:720px;margin:0 auto;padding:28px 18px 48px}
-.card{
-  background:rgba(255,255,255,.95);
-  border:1px solid rgba(217,164,65,.55);
-  border-radius:24px;
-  padding:26px 22px;
-  box-shadow:0 18px 50px rgba(80,10,10,.2);
-}
+.card{background:rgba(255,255,255,.95);border:1px solid rgba(217,164,65,.55);border-radius:24px;padding:26px 22px;box-shadow:0 18px 50px rgba(80,10,10,.2)}
 h1{text-align:center;color:var(--red);margin:6px 0 8px;font-size:34px;letter-spacing:2px}
-.sub{text-align:center;color:#7c2d12;margin:0 0 28px;font-size:18px}
-.status{text-align:center;color:#9a3412;font-size:14px;margin-bottom:18px}
+.sub{text-align:center;color:#7c2d12;margin:0 0 18px;font-size:18px}
+.version{text-align:center;color:#9a3412;font-size:13px;margin-bottom:22px}
 label{display:block;font-weight:800;margin:14px 0 8px;font-size:18px}
-input{
-  width:100%;padding:16px 18px;border-radius:16px;border:1px solid #e7c274;
-  font-size:20px;background:white;outline:none;
-}
-button{
-  width:100%;border:0;border-radius:18px;background:linear-gradient(90deg,#991b1b,#dc2626);
-  color:white;font-size:22px;font-weight:900;padding:16px;margin-top:22px;cursor:pointer
-}
-.result{
-  margin-top:22px;border-radius:18px;padding:22px;text-align:center;background:#fff7ed;
-  border:1px solid #f0c36d;display:none;font-size:20px
-}
+input{width:100%;padding:16px 18px;border-radius:16px;border:1px solid #e7c274;font-size:20px;background:white;outline:none}
+button{width:100%;border:0;border-radius:18px;background:linear-gradient(90deg,#991b1b,#dc2626);color:white;font-size:22px;font-weight:900;padding:16px;margin-top:22px;cursor:pointer}
+.result{margin-top:22px;border-radius:18px;padding:22px;text-align:center;background:#fff7ed;border:1px solid #f0c36d;display:none;font-size:20px}
 .tableNo{font-size:52px;color:#991b1b;font-weight:900;margin:10px 0}
 .bad{background:#fef2f2;border-color:#fecaca;color:#991b1b}
 .ok{background:#f0fdf4;border-color:#bbf7d0;color:#166534}
 .multi{background:#fff7ed;border-color:#f0c36d;color:#7c2d12;text-align:left}
 .multi h3{text-align:center;margin:0 0 14px;color:#991b1b}
 .result-list{display:flex;flex-direction:column;gap:10px}
-.result-item{
-  display:flex;justify-content:space-between;align-items:center;
-  border:1px solid #f0c36d;background:white;border-radius:14px;padding:14px 16px;
-}
+.result-item{display:flex;justify-content:space-between;align-items:center;border:1px solid #f0c36d;background:white;border-radius:14px;padding:14px 16px}
 .result-name{font-weight:800;font-size:20px;color:#3b1d1d}
 .result-table{font-weight:900;font-size:24px;color:#991b1b}
 .result-note{font-size:13px;color:#9a3412;margin-top:4px}
@@ -57,7 +35,7 @@ button{
   <div class="card">
     <h1>婚礼座位查询</h1>
     <p class="sub">欢迎参加我们的婚礼 · 请输入姓名查询桌号</p>
-    <div id="status" class="status">正在读取宾客名单……</div>
+    <div id="version" class="version">正在读取名单更新时间……</div>
 
     <label for="name">姓名</label>
     <input id="name" type="text" placeholder="例如：张三" autocomplete="name">
@@ -70,6 +48,9 @@ button{
 
 <script>
 let guests = [];
+const owner = 'yjg020305';
+const repo = 'wedding-seat';
+const csvFile = 'guests.csv';
 
 function parseCSV(text){
   text = text.replace(/^\uFEFF/, '');
@@ -101,18 +82,46 @@ function importRows(rows){
     table:(r[tableIdx]||'').trim(),
     note: noteIdx>=0 ? (r[noteIdx]||'').trim() : ''
   })).filter(g=>g.name && g.table);
-  document.getElementById('status').textContent = `已读取 ${guests.length} 位宾客名单`;
+}
+
+function formatChinaTime(iso){
+  const d = new Date(iso);
+  if(isNaN(d)) return '';
+  return d.toLocaleString('zh-CN', {
+    timeZone:'Asia/Shanghai',
+    year:'numeric', month:'2-digit', day:'2-digit',
+    hour:'2-digit', minute:'2-digit',
+    hour12:false
+  }).replace(/\//g,'-');
+}
+
+async function loadUpdateTime(){
+  const version = document.getElementById('version');
+  try{
+    const api = `https://api.github.com/repos/${owner}/${repo}/commits?path=${encodeURIComponent(csvFile)}&per_page=1`;
+    const res = await fetch(api, {cache:'no-store'});
+    if(!res.ok) throw new Error('GitHub API 读取失败');
+    const data = await res.json();
+    const iso = data && data[0] && data[0].commit && data[0].commit.committer && data[0].commit.committer.date;
+    if(iso){
+      version.textContent = '名单更新于：' + formatChinaTime(iso);
+    }else{
+      version.textContent = '名单已加载';
+    }
+  }catch(e){
+    version.textContent = '名单已加载';
+  }
 }
 
 async function loadGuests(){
-  const status = document.getElementById('status');
+  const version = document.getElementById('version');
   try{
-    const res = await fetch('guests.csv?time=' + Date.now(), {cache:'no-store'});
+    const res = await fetch(csvFile + '?time=' + Date.now(), {cache:'no-store'});
     if(!res.ok) throw new Error('未找到 guests.csv');
     const text = await res.text();
     importRows(parseCSV(text));
   }catch(err){
-    status.textContent = '名单读取失败：请确认 index.html 和 guests.csv 在同一个 GitHub 仓库根目录。';
+    version.textContent = '名单读取失败，请联系签到台工作人员。';
   }
 }
 
@@ -159,6 +168,7 @@ document.getElementById('name').addEventListener('keydown', function(e){
 });
 
 loadGuests();
+loadUpdateTime();
 </script>
 </body>
 </html>
