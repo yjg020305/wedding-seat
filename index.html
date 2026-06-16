@@ -34,11 +34,11 @@ button{width:100%;border:0;border-radius:18px;background:linear-gradient(90deg,#
 <div class="wrap">
   <div class="card">
     <h1>婚礼座位查询</h1>
-    <p class="sub">欢迎参加我们的婚礼 · 请输入姓名查询桌号</p>
+    <p class="sub">欢迎参加我们的婚礼 · 请输入姓名查询座位</p>
     <div id="version" class="version">正在读取名单更新时间……</div>
     <label for="name">姓名</label>
     <input id="name" type="text" placeholder="例如：张三" autocomplete="name">
-    <button onclick="querySeat()">查询桌号</button>
+    <button onclick="querySeat()">查询座位</button>
     <div id="result" class="result"></div>
   </div>
   <div class="footer">如查询不到，请联系签到台工作人员。</div>
@@ -118,10 +118,10 @@ function querySeat(){
   }else if(matches.length===1){
     const g=matches[0];
     box.classList.add('ok');
-    box.innerHTML=`<div>欢迎您，<b>${escapeHTML(g.name)}</b></div><div class="tableNo">✿ ${escapeHTML(g.table)} ✿</div>${g.note?`<div>${escapeHTML(g.note)}</div>`:''}<div style="font-size:16px;margin-top:8px;">祝您用餐愉快</div>`;
+    box.innerHTML=`<div>欢迎您，<b>${escapeHTML(g.name)}</b></div><div class="tableNo">✿ ${escapeHTML(g.table)} ✿</div><div style="font-size:16px;margin-top:8px;">祝您用餐愉快</div>`;
   }else{
     box.classList.add('multi');
-    const list = matches.map(g=>`<div class="result-item"><div><div class="result-name">${escapeHTML(g.name)}</div>${g.note?`<div class="result-note">${escapeHTML(g.note)}</div>`:''}</div><div class="result-table">${escapeHTML(g.table)}</div></div>`).join('');
+    const list = matches.map(g=>`<div class="result-item"><div><div class="result-name">${escapeHTML(g.name)}</div></div><div class="result-table">${escapeHTML(g.table)}</div></div>`).join('');
     box.innerHTML=`<h3>查询到 ${matches.length} 位宾客</h3><div class="result-list">${list}</div>`;
   }
 }
